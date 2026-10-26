@@ -159,6 +159,15 @@ class Settings(BaseSettings):
     # stopped. 0 keeps it running for the life of the process. The next
     # download, search, chapter fetch or monitor pass starts it again.
     suwayomi_idle_shutdown_minutes: int = Field(default=10, ge=0, le=1440)
+    # Comic catalogues. Both are off until the operator supplies a key.
+    comicvine_enabled: bool = False
+    comicvine_api_url: str = "https://comicvine.gamespot.com/api"
+    comicvine_api_key: str | None = Field(default=None, repr=False)
+    metron_enabled: bool = False
+    metron_api_url: str = "https://metron.cloud/api"
+    metron_username: str | None = None
+    metron_password: str | None = Field(default=None, repr=False)
+    comics_library_dir: Path | None = None
     prowlarr_enabled: bool = False
     prowlarr_url: str = "http://prowlarr:9696"
     prowlarr_api_key: str | None = Field(default=None, repr=False)

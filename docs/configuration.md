@@ -213,6 +213,14 @@ searched and downloaded directly.
 
 | Variable | Default | Description |
 | --- | --- | --- |
+| `TANKARR_COMICVINE_ENABLED` | `false` | Search [ComicVine](https://comicvine.gamespot.com) for comic series and issues. Needs your own API key and is subject to ComicVine's terms and rate limits. |
+| `TANKARR_COMICVINE_API_URL` | `https://comicvine.gamespot.com/api` | ComicVine API base URL. |
+| `TANKARR_COMICVINE_API_KEY` | unset | Your ComicVine API key. Never logged or returned by the API. |
+| `TANKARR_METRON_ENABLED` | `false` | Search [Metron](https://metron.cloud) for comic series and issues. Needs your own account. Tankarr sends at most one request every 5 seconds (Metron allows 15 a minute and 5,000 a day), never retries, and stops sending entirely after a 401/403 (until you fix the credentials and restart) or a 429 (for an hour), so Metron does not ban your address. |
+| `TANKARR_METRON_API_URL` | `https://metron.cloud/api` | Metron API base URL. |
+| `TANKARR_METRON_USERNAME` | unset | Your Metron username. |
+| `TANKARR_METRON_PASSWORD` | unset | Your Metron password. Never logged or returned by the API. |
+| `TANKARR_COMICS_LIBRARY_DIR` | `<library>/Comics` | Where comic series folders are written. Defaults to a `Comics` folder inside `TANKARR_LIBRARY_DIR`. |
 | `TANKARR_PROWLARR_ENABLED` | `false` | Search your indexers through Prowlarr for books and chapters: in Interactive Search on series and Wanted, and in the automatic Wanted recovery, which grabs only unambiguous matches. Needs the API key. Settings → Indexers & torrents. |
 | `TANKARR_PROWLARR_URL` | `http://prowlarr:9696` | Root address of Prowlarr as Tankarr reaches it, without a path. Settings → Indexers & torrents. |
 | `TANKARR_PROWLARR_API_KEY` | *unset* | Prowlarr API key, from Prowlarr → Settings → General → Security. Secret; stored in the secrets file. Settings → Indexers & torrents. |

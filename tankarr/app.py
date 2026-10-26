@@ -2228,6 +2228,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             await registered.aclose()
         await qbittorrent.aclose()
         await sabnzbd.aclose()
+        for comic_provider in app.state.comic_providers.values():
+            await comic_provider.aclose()
         api_executor.shutdown(wait=True, cancel_futures=True)
         revision_executor.shutdown(wait=True, cancel_futures=True)
         blocking_executor.shutdown(wait=True, cancel_futures=True)
@@ -6289,6 +6291,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     register_translation_routes(app, translations, monitor)
 
+    from tankarr.comics.comicvine import ComicVineClient
+    from tankarr.comics.metron import MetronClient
+    from tankarr.comics.routes import register_comic_routes
+    from tankarr.comics.store import ComicStore
+
+    comic_providers = {
+        client.name: client
+        for client in (ComicVineClient(settings), MetronClient(settings))
+    }
+    app.state.comic_providers = comic_providers
+    register_comic_routes(app, comic_providers, ComicStore(database))
     # ------------------------------------------------------------ tasks
     tasks = TaskRegistry()
 

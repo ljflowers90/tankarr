@@ -676,6 +676,41 @@ CREATE INDEX IF NOT EXISTS idx_author_work_catalogue
 
 CREATE INDEX IF NOT EXISTS idx_manga_author_author
     ON manga_author(author_id, manga_id);
+
+CREATE TABLE IF NOT EXISTS comic_series (
+    id TEXT PRIMARY KEY,
+    provider TEXT NOT NULL,
+    provider_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    publisher TEXT,
+    year INTEGER,
+    description TEXT,
+    cover_url TEXT,
+    issue_count INTEGER,
+    status TEXT,
+    monitored INTEGER NOT NULL DEFAULT 1,
+    folder TEXT,
+    added_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(provider, provider_id)
+);
+
+CREATE TABLE IF NOT EXISTS comic_issue (
+    id TEXT PRIMARY KEY,
+    series_id TEXT NOT NULL REFERENCES comic_series(id) ON DELETE CASCADE,
+    provider_id TEXT NOT NULL,
+    number TEXT NOT NULL,
+    title TEXT,
+    cover_date TEXT,
+    store_date TEXT,
+    status TEXT NOT NULL DEFAULT 'wanted',
+    monitored INTEGER NOT NULL DEFAULT 1,
+    file_path TEXT,
+    UNIQUE(series_id, provider_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_comic_issue_series
+    ON comic_issue(series_id, status);
 """
 
 # Download order shared by the worker and the Activity page: active jobs

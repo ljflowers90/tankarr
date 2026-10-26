@@ -1,5 +1,10 @@
 import { serverUrl } from "./serverUrl";
 import type {
+  ComicProviderStatus,
+  ComicSearchResult,
+  ComicSeries,
+  ComicSeriesSummary,
+  ComicWantedIssue,
   SystemLogs,
   SystemTask,
   InternetArchiveProbe,
@@ -300,6 +305,26 @@ export const libraryStore = {
 };
 
 export const api = {
+  comicProviders: () => request<ComicProviderStatus[]>("/api/comics/providers"),
+  comicSearch: (query: string, provider: string) =>
+    request<ComicSearchResult[]>(
+      `/api/comics/search?q=${encodeURIComponent(query)}&provider=${encodeURIComponent(provider)}`,
+    ),
+  comicAdd: (provider: string, providerId: string) =>
+    request<ComicSeries>("/api/comics/series", {
+      method: "POST",
+      body: JSON.stringify({ provider, provider_id: providerId }),
+    }),
+  comicSeriesList: () => request<ComicSeriesSummary[]>("/api/comics/series"),
+  comicSeries: (id: string) => request<ComicSeries>(`/api/comics/series/${encodeURIComponent(id)}`),
+  comicMonitor: (id: string, monitored: boolean) =>
+    request<ComicSeries>(`/api/comics/series/${encodeURIComponent(id)}/monitored`, {
+      method: "PUT",
+      body: JSON.stringify({ monitored }),
+    }),
+  comicDelete: (id: string) =>
+    request<{ deleted: string }>(`/api/comics/series/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  comicWanted: () => request<ComicWantedIssue[]>("/api/comics/wanted"),
   translations: (mangaId: string) => request<{
     enabled: boolean;
     jobs: Array<{ id: string; slot_key: string; target_language: string; status: string; message: string; source: { language: string } }>;

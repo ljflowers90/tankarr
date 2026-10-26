@@ -1707,3 +1707,60 @@ export type SeriesAuditResult = {
   manga_id: string; files_retired: number; files_deleted: number; chapters_reset: number;
   releases_removed: number; source_removed: boolean; cleanup_errors: string[]; cleanup_warning?: string | null;
 };
+
+export type ComicProviderStatus = {
+  name: string;
+  label: string;
+  enabled: boolean;
+  configured: boolean;
+  paused: string | null;
+};
+
+export type ComicSearchResult = {
+  provider: string;
+  provider_id: string;
+  title: string;
+  publisher: string | null;
+  year: number | null;
+  description: string | null;
+  cover_url: string | null;
+  issue_count: number | null;
+  status: string | null;
+  in_library: boolean;
+};
+
+export type ComicIssue = {
+  id: string;
+  series_id: string;
+  provider_id: string;
+  number: string;
+  title: string | null;
+  cover_date: string | null;
+  store_date: string | null;
+  status: string;
+  monitored: number;
+  file_path: string | null;
+};
+
+export type ComicSeriesSummary = {
+  id: string;
+  provider: string;
+  provider_id: string;
+  title: string;
+  publisher: string | null;
+  year: number | null;
+  description: string | null;
+  cover_url: string | null;
+  issue_count: number | null;
+  status: string | null;
+  monitored: number;
+  issues: number;
+  downloaded: number;
+  wanted: number;
+};
+
+export type ComicSeries = Omit<ComicSeriesSummary, "issues" | "downloaded" | "wanted"> & {
+  issues: ComicIssue[];
+};
+
+export type ComicWantedIssue = ComicIssue & { series_title: string };

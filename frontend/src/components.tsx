@@ -479,6 +479,8 @@ export type Route =
   | { page: "wanted" }
   | { page: "history" }
   | { page: "import" }
+  | { page: "comics"; tab: "library" | "search" | "wanted" }
+  | { page: "comic"; id: string }
   | { page: "settings" }
   | { page: "system" }
   | { page: "setup" };
@@ -518,6 +520,13 @@ export function parseRoute(hash: string): Route {
   }
   if (segments[0] === "authors" && segments[1]) {
     return { page: "author", id: decodeURIComponent(segments.slice(1).join("/")) };
+  }
+  if (segments[0] === "comics") {
+    if (segments[1] === "series" && segments[2]) {
+      return { page: "comic", id: decodeURIComponent(segments.slice(2).join("/")) };
+    }
+    const tab = segments[1] === "search" || segments[1] === "wanted" ? segments[1] : "library";
+    return { page: "comics", tab };
   }
   if (segments[0] === "calendar") return { page: "calendar" };
   if (segments[0] === "bookmarks") return { page: "bookmarks" };

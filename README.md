@@ -45,11 +45,16 @@ series complete.
 > - **Storage.** New `comic_series` and `comic_issue` tables, separate from the
 >   manga tables. New issues start as *wanted*. Comics are written under
 >   `TANKARR_COMICS_LIBRARY_DIR` (default: a `Comics` folder in the library).
-> - **API only, for now.** `GET /api/comics/providers`, `GET /api/comics/search`,
+> - **Web interface.** A **Western Comics** entry in the sidebar with three
+>   tabs: **Library** (tracked series), **Add New** (search ComicVine or Metron,
+>   then add) and **Wanted** (monitored issues not yet downloaded), plus a
+>   series page listing issues with monitor and remove actions. A catalogue
+>   that is disabled, has no credentials or is paused is explained on the
+>   search tab instead of being queried.
+> - **API.** `GET /api/comics/providers`, `GET /api/comics/search`,
 >   `POST /api/comics/series`, `GET /api/comics/series[/{id}]`,
 >   `PUT /api/comics/series/{id}/monitored`, `DELETE /api/comics/series/{id}`
->   and `GET /api/comics/wanted`. There is no comics page in the web interface
->   yet.
+>   and `GET /api/comics/wanted`.
 > - **Safe with rate-limited catalogues.** ComicVine requests are paced and its
 >   key never appears in errors. Metron requests are sent one at a time, five
 >   seconds apart (its limit is 15 a minute), are never retried, and stop
@@ -59,7 +64,7 @@ series complete.
 > **Not built yet:** issue release parsing and the Wanted search, indexer
 > search and sending to download clients (qBittorrent, SABnzbd, NZBGet),
 > post-processing and `ComicInfo.xml` for issues, importing an existing
-> CBZ/CBR library, story arcs and the pull list, and the web interface.
+> CBZ/CBR library, and story arcs and the pull list.
 >
 > Everything else in this README describes upstream Tankarr and applies
 > unchanged.

@@ -214,19 +214,40 @@ type NavItem = {
   subitem?: boolean;
   groupStart?: boolean;
   activePages?: string[];
+  match?: (route: Route) => boolean;
 };
 
+function navActive(item: NavItem, route: Route): boolean {
+  return item.match ? item.match(route) : navActive(item, route);
+}
+
 const NAV_ITEMS: NavItem[] = [
-  { path: "#/", page: "library", label: msg("Comics"), icon: "comics", activePages: ["library", "series", "author"] },
+  { path: "#/", page: "library", label: msg("Manga"), icon: "comics", activePages: ["library", "series", "author"] },
   { path: "#/add", page: "add", label: msg("Add New"), icon: "add", subitem: true },
   { path: "#/import", page: "import", label: msg("Library Import"), icon: "upload", subitem: true },
   {
     path: "#/comics",
     page: "comics",
-    label: msg("Western Comics"),
+    label: msg("Comics"),
     icon: "library",
     groupStart: true,
-    activePages: ["comics", "comic"],
+    match: (route) => route.page === "comic" || (route.page === "comics" && (route.tab === "library" || route.tab === "wanted")),
+  },
+  {
+    path: "#/comics/search",
+    page: "comics-add",
+    label: msg("Add New"),
+    icon: "add",
+    subitem: true,
+    match: (route) => route.page === "comics" && route.tab === "search",
+  },
+  {
+    path: "#/comics/import",
+    page: "comics-import",
+    label: msg("Library Import"),
+    icon: "upload",
+    subitem: true,
+    match: (route) => route.page === "comics" && route.tab === "import",
   },
   { path: "#/calendar", page: "calendar", label: msg("Calendar"), icon: "calendar" },
   { path: "#/bookmarks", page: "bookmarks", label: msg("Bookmarks"), icon: "bookmark" },
@@ -255,7 +276,7 @@ const PageRouter = memo(function PageRouter({ route, finishSetup }: { route: Rou
     case "reader":
       return <ReaderPage key={route.id} id={route.id} initialPage={route.initialPage} />;
     case "comics":
-      return <ComicsPage tab={route.tab} />;
+      return <ComicsPage tab={route.tab} query={route.query} />;
     case "comic":
       return <ComicSeriesPage key={route.id} id={route.id} />;
     case "calendar":
@@ -425,7 +446,7 @@ export default function App({
                   item.subitem ? "nav-subitem" : "",
                   item.groupStart ? "nav-group-start" : "",
                   item.page === "settings" || item.page === "system" ? "nav-secondary" : "",
-                  (item.activePages ?? [item.page]).includes(route.page) ? "active" : "",
+                  navActive(item, route) ? "active" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
@@ -475,8 +496,8 @@ export default function App({
           {mobileNavOpen ? <Modal title={t("Navigation")} className="navigation-dialog" onClose={() => setMobileNavOpen(false)}>
             <nav aria-label={t("Mobile navigation")}>
               {NAV_ITEMS.map((item) => <a key={item.page} href={item.path}
-                className={`nav-item${item.groupStart ? " nav-group-start" : ""}${(item.activePages ?? [item.page]).includes(route.page) ? " active" : ""}`}
-                aria-current={(item.activePages ?? [item.page]).includes(route.page) ? "page" : undefined}
+                className={`nav-item${item.groupStart ? " nav-group-start" : ""}${navActive(item, route) ? " active" : ""}`}
+                aria-current={navActive(item, route) ? "page" : undefined}
                 onClick={() => setMobileNavOpen(false)}>
                 {item.icon ? <Icon name={item.icon} /> : null}<span>{t(item.label)}</span>
                 {item.page === "activity" && activeCount > 0 ? <span className="nav-badge">{activeCount}</span> : null}

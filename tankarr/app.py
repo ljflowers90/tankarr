@@ -6357,7 +6357,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         for client in (ComicVineClient(settings), MetronClient(settings))
     }
     app.state.comic_providers = comic_providers
-    register_comic_routes(app, comic_providers, ComicStore(database))
+    register_comic_routes(
+        app, comic_providers, ComicStore(database), settings, importer
+    )
     # ------------------------------------------------------------ tasks
     tasks = TaskRegistry()
 

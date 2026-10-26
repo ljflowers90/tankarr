@@ -2,6 +2,8 @@ import { serverUrl } from "./serverUrl";
 import type {
   ComicProviderStatus,
   ComicCatalogueProbe,
+  ComicImportResult,
+  ComicImportScan,
   ComicSearchResponse,
   ComicSearchResult,
   ComicSeries,
@@ -312,6 +314,18 @@ export const api = {
     request<ComicSearchResponse>(
       `/api/comics/search?q=${encodeURIComponent(query)}&provider=${encodeURIComponent(provider)}`,
     ),
+  comicImportScan: (uploadId?: string) =>
+    request<ComicImportScan>(
+      `/api/comics/import/scan${uploadId ? `?upload_id=${encodeURIComponent(uploadId)}` : ""}`,
+    ),
+  comicImport: (
+    items: { path: string; series_id: string; issue_id: string }[],
+    options: { uploadId?: string; move: boolean },
+  ) =>
+    request<ComicImportResult>("/api/comics/import", {
+      method: "POST",
+      body: JSON.stringify({ items, upload_id: options.uploadId ?? null, move: options.move }),
+    }),
   comicAdd: (provider: string, providerId: string) =>
     request<ComicSeries>("/api/comics/series", {
       method: "POST",

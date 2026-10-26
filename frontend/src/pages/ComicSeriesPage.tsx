@@ -50,7 +50,7 @@ export default function ComicSeriesPage({ id }: { id: string }) {
   return (
     <div className="page">
       <a className="btn btn-ghost" href="#/comics">
-        <Icon name="library" /> {t("Western Comics")}
+        <Icon name="library" /> {t("Comics")}
       </a>
       <div className="result-card">
         <Cover url={series.cover_url} title={series.title} className="result-cover" />

@@ -479,7 +479,7 @@ export type Route =
   | { page: "wanted" }
   | { page: "history" }
   | { page: "import" }
-  | { page: "comics"; tab: "library" | "search" | "wanted" }
+  | { page: "comics"; tab: "library" | "search" | "wanted" | "import"; query?: string }
   | { page: "comic"; id: string }
   | { page: "settings" }
   | { page: "system" }
@@ -525,8 +525,9 @@ export function parseRoute(hash: string): Route {
     if (segments[1] === "series" && segments[2]) {
       return { page: "comic", id: decodeURIComponent(segments.slice(2).join("/")) };
     }
-    const tab = segments[1] === "search" || segments[1] === "wanted" ? segments[1] : "library";
-    return { page: "comics", tab };
+    const tab =
+      segments[1] === "search" || segments[1] === "wanted" || segments[1] === "import" ? segments[1] : "library";
+    return { page: "comics", tab, query: parameters.get("q") ?? undefined };
   }
   if (segments[0] === "calendar") return { page: "calendar" };
   if (segments[0] === "bookmarks") return { page: "bookmarks" };

@@ -3,10 +3,12 @@ from __future__ import annotations
 import asyncio
 
 from fastapi import FastAPI, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from tankarr.comics import importer as comic_import
 from tankarr.comics.base import ComicProvider
 from tankarr.comics.store import ComicStore
+from tankarr.config import Settings
 from tankarr.providers.base import ProviderRequestError
 from tankarr.redaction import redact_secrets
 
@@ -20,8 +22,24 @@ class MonitoredBody(BaseModel):
     monitored: bool
 
 
+class ImportItem(BaseModel):
+    path: str
+    series_id: str
+    issue_id: str
+
+
+class ComicImportRequest(BaseModel):
+    items: list[ImportItem] = Field(min_length=1, max_length=5000)
+    upload_id: str | None = None
+    move: bool = False
+
+
 def register_comic_routes(
-    app: FastAPI, providers: dict[str, ComicProvider], store: ComicStore
+    app: FastAPI,
+    providers: dict[str, ComicProvider],
+    store: ComicStore,
+    settings: Settings,
+    importer,
 ):
     def provider_for(name: str) -> ComicProvider:
         provider = providers.get(name)
@@ -140,3 +158,30 @@ def register_comic_routes(
     @app.get("/api/comics/wanted")
     async def comic_wanted():
         return store.wanted()
+
+    def import_root(upload_id: str | None):
+        try:
+            if upload_id:
+                return importer._upload_root(upload_id)
+            if importer.root is None:
+                raise FileNotFoundError("No import directory is configured or mounted")
+            return importer.root
+        except FileNotFoundError as exc:
+            raise HTTPException(404, str(exc)) from exc
+
+    @app.get("/api/comics/import/scan")
+    async def comic_import_scan(upload_id: str | None = None):
+        root = import_root(upload_id)
+        return await asyncio.to_thread(comic_import.scan, root, store)
+
+    @app.post("/api/comics/import", status_code=202)
+    async def comic_import_run(body: ComicImportRequest):
+        root = import_root(body.upload_id)
+        return await asyncio.to_thread(
+            comic_import.import_files,
+            settings,
+            store,
+            root,
+            [item.model_dump() for item in body.items],
+            move=body.move,
+        )

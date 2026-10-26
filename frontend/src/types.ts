@@ -1775,3 +1775,33 @@ export type ComicCatalogueProbe = {
   error?: string;
   latency_ms?: number;
 };
+
+export type ComicImportFile = {
+  path: string;
+  name: string;
+  size: number;
+  issue: string | null;
+  year: number | null;
+  issue_id: string | null;
+  status: "ready" | "already_have" | "no_issue" | "unmatched" | "unsupported";
+};
+
+export type ComicImportGroup = {
+  key: string;
+  label: string;
+  year: number | null;
+  series_id: string | null;
+  files: ComicImportFile[];
+};
+
+export type ComicImportScan = {
+  root: string;
+  groups: ComicImportGroup[];
+  skipped: { path: string; reason: string }[];
+  truncated: boolean;
+};
+
+export type ComicImportResult = {
+  imported: string[];
+  errors: { path: string; error: string }[];
+};

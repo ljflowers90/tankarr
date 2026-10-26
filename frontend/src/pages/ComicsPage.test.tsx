@@ -82,3 +82,40 @@ it("shows a series' issues and toggles monitoring", async () => {
   await waitFor(() => expect(monitor).toHaveBeenCalledWith("s1", false));
   expect(await screen.findByText("Not monitored")).toBeTruthy();
 });
+
+it("scans for comics to import and files only the ready ones", async () => {
+  vi.spyOn(api, "comicProviders").mockResolvedValue([provider]);
+  const scan = {
+    root: "/import",
+    skipped: [],
+    truncated: false,
+    groups: [
+      {
+        key: "series:s1",
+        label: "Example Comic",
+        year: 2019,
+        series_id: "s1",
+        files: [
+          { path: "a/Example Comic 002.cbz", name: "Example Comic 002.cbz", size: 2048, issue: "002", year: 2019, issue_id: "i2", status: "ready" as const },
+        ],
+      },
+      {
+        key: "guess:stranger:",
+        label: "Stranger",
+        year: null,
+        series_id: null,
+        files: [{ path: "Stranger 004.cbz", name: "Stranger 004.cbz", size: 1024, issue: "004", year: null, issue_id: null, status: "unmatched" as const }],
+      },
+    ],
+  };
+  vi.spyOn(api, "comicImportScan").mockResolvedValue(scan);
+  const run = vi.spyOn(api, "comicImport").mockResolvedValue({ imported: ["a/Example Comic 002.cbz"], errors: [] });
+  app(<ComicsPage tab="import" />);
+  fireEvent.click(await screen.findByRole("button", { name: /Scan import folder/ }));
+  expect(await screen.findByText("Stranger")).toBeTruthy();
+  expect(screen.getByRole("link", { name: /Find in catalogue/ }).getAttribute("href")).toBe("#/comics/search?q=Stranger");
+  fireEvent.click(screen.getByRole("button", { name: /Import 1 issue/ }));
+  await waitFor(() =>
+    expect(run).toHaveBeenCalledWith([{ path: "a/Example Comic 002.cbz", series_id: "s1", issue_id: "i2" }], { uploadId: undefined, move: false }),
+  );
+});

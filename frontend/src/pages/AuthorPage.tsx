@@ -246,7 +246,7 @@ export default function AuthorPage({ id }: { id: string }) {
 
       <div className="author-page-header">
         <div className="author-page-heading">
-          <a className="muted small" href="#/">{t("Comics")}</a>
+          <a className="muted small" href="#/">{t("Manga")}</a>
           <h1>{page.author}</h1>
           <div className="muted small">
             {t("{works} works · {inLibrary} in library · {available} available to add", { works: page.work_count, inLibrary: page.library_manga_count, available: workCounts.available })}

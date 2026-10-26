@@ -117,6 +117,15 @@ class ComicStore:
             ).fetchall()
         return [dict(row) for row in rows]
 
+    def mark_downloaded(self, issue_id: str, file_path: str) -> None:
+        with self.database.connect() as connection:
+            changed = connection.execute(
+                "UPDATE comic_issue SET status='downloaded', file_path=? WHERE id=?",
+                (file_path, issue_id),
+            ).rowcount
+        if not changed:
+            raise KeyError(issue_id)
+
     def set_series_monitored(self, series_id: str, monitored: bool) -> None:
         with self.database.connect() as connection:
             changed = connection.execute(

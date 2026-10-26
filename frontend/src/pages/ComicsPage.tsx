@@ -9,20 +9,22 @@ import type {
   ComicWantedIssue,
 } from "../types";
 import { t, tn } from "../i18n";
+import ComicImport from "./ComicImport";
 
-type Tab = "library" | "search" | "wanted";
+type Tab = "library" | "search" | "wanted" | "import";
 
 const TABS: { tab: Tab; path: string; label: () => string }[] = [
   { tab: "library", path: "#/comics", label: () => t("Library") },
   { tab: "search", path: "#/comics/search", label: () => t("Add New") },
+  { tab: "import", path: "#/comics/import", label: () => t("Library Import") },
   { tab: "wanted", path: "#/comics/wanted", label: () => t("Wanted") },
 ];
 
-export default function ComicsPage({ tab }: { tab: Tab }) {
+export default function ComicsPage({ tab, query }: { tab: Tab; query?: string }) {
   return (
     <div className="page">
-      <h1 className="page-title">{t("Western Comics")}</h1>
-      <div className="toolbar" role="tablist" aria-label={t("Western Comics")}>
+      <h1 className="page-title">{t("Comics")}</h1>
+      <div className="toolbar" role="tablist" aria-label={t("Comics")}>
         {TABS.map((item) => (
           <a
             key={item.tab}
@@ -35,7 +37,15 @@ export default function ComicsPage({ tab }: { tab: Tab }) {
           </a>
         ))}
       </div>
-      {tab === "library" ? <ComicLibrary /> : tab === "search" ? <ComicSearch /> : <ComicWanted />}
+      {tab === "library" ? (
+        <ComicLibrary />
+      ) : tab === "search" ? (
+        <ComicSearch initialQuery={query ?? ""} />
+      ) : tab === "import" ? (
+        <ComicImport />
+      ) : (
+        <ComicWanted />
+      )}
     </div>
   );
 }
@@ -97,11 +107,11 @@ function providerNote(provider: ComicProviderStatus | undefined): string | null 
   return null;
 }
 
-function ComicSearch() {
+function ComicSearch({ initialQuery }: { initialQuery: string }) {
   const { notify } = useApp();
   const [providers, setProviders] = useState<ComicProviderStatus[]>([]);
   const [provider, setProvider] = useState("all");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<ComicSearchResult[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useState<string | null>(null);

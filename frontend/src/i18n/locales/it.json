@@ -1797,7 +1797,6 @@
     "other": "{count} file non supportati saltati."
   },
   "{count} updated": "{count} aggiornati",
-  "Western Comics": "Fumetti occidentali",
   "Comic series not found": "Serie di fumetti non trovata",
   "Remove {title} from Tankarr? Files are not deleted.": "Rimuovere {title} da Tankarr? I file non vengono eliminati.",
   "Not monitored": "Non monitorata",
@@ -1838,6 +1837,36 @@
   "Your Metron account name.": "Il nome del tuo account Metron.",
   "Stored in /config/metadata.env with mode 0600 and never returned unmasked.": "Salvata in /config/metadata.env con modalità 0600 e mai restituita in chiaro.",
   "OK — connected in {ms} ms": "OK — connesso in {ms} ms",
+  "Manga": "Manga",
+  "Already in library": "Già in libreria",
+  "Issue not in series": "Numero non presente nella serie",
+  "Not in library": "Non in libreria",
+  "Not a single issue": "Non è un singolo numero",
+  "Scanning…": "Scansione…",
+  "No supported comic archives selected.": "Nessun archivio di fumetti supportato selezionato.",
+  "Uploading…": "Caricamento…",
+  "Choose comic files": "Scegli file di fumetti",
+  "Choose comic folder": "Scegli cartella di fumetti",
+  "Scan import folder": "Scansiona la cartella di importazione",
+  "Move files instead of copying": "Sposta i file invece di copiarli",
+  "Only issues of series already in your library are imported. Add other series first, then scan again.": "Vengono importati solo i numeri delle serie già presenti nella libreria. Aggiungi prima le altre serie, poi scansiona di nuovo.",
+  "Import existing comics": "Importa fumetti esistenti",
+  "Scan the import folder or choose CBZ, CBR or PDF files to match them to the series you track.": "Scansiona la cartella di importazione o scegli file CBZ, CBR o PDF per associarli alle serie che segui.",
+  "No comic files found": "Nessun file di fumetti trovato",
+  "The scan stopped at the file limit.": "La scansione si è fermata al limite di file.",
+  "Find in catalogue": "Cerca nel catalogo",
+  "{count} issues imported.": {
+    "one": "{count} numero importato.",
+    "other": "{count} numeri importati."
+  },
+  "Import {count} issues": {
+    "one": "Importa {count} numero",
+    "other": "Importa {count} numeri"
+  },
+  "{count} issues ready to import": {
+    "one": "{count} numero pronto per l'importazione",
+    "other": "{count} numeri pronti per l'importazione"
+  },
   "{count} vol": "{count} vol.",
   "{count} vols": {
     "one": "{count} vol.",

@@ -49,15 +49,20 @@ series complete.
 > - **Storage.** New `comic_series` and `comic_issue` tables, separate from the
 >   manga tables. New issues start as *wanted*. Comics are written under
 >   `TANKARR_COMICS_LIBRARY_DIR` (default: a `Comics` folder in the library).
-> - **Web interface.** A **Western Comics** entry in the sidebar with three
->   tabs: **Library** (tracked series), **Add New** (search ComicVine or Metron,
->   then add) and **Wanted** (monitored issues not yet downloaded), plus a
+> - **Web interface.** The manga section is now labelled **Manga**, and the
+>   new **Comics** section sits below it with its own **Add New** and
+>   **Library Import** sub-items. Its tabs are **Library** (tracked series),
+>   **Add New** (search ComicVine or Metron, then add), **Library Import**
+>   (scan the import folder, or upload CBZ/CBR/PDF files, match them to tracked
+>   series and issues by name and year, then copy or move them into the comics
+>   library) and **Wanted** (monitored issues not yet downloaded), plus a
 >   series page listing issues with monitor and remove actions. A catalogue
 >   that is disabled, has no credentials or is paused is explained on the
 >   search tab instead of being queried.
 > - **API.** `GET /api/comics/providers`, `GET /api/comics/search`,
 >   `POST /api/comics/series`, `GET /api/comics/series[/{id}]`,
->   `PUT /api/comics/series/{id}/monitored`, `DELETE /api/comics/series/{id}`
+>   `PUT /api/comics/series/{id}/monitored`, `DELETE /api/comics/series/{id}`,
+>   `GET /api/comics/import/scan` and `POST /api/comics/import`
 >   and `GET /api/comics/wanted`.
 > - **Safe with rate-limited catalogues.** ComicVine requests are paced and its
 >   key never appears in errors. Metron requests are sent one at a time, five

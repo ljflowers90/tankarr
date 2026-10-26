@@ -428,3 +428,63 @@ def test_metron_test_with_unsaved_values_respects_a_pause_already_in_force(
         second = client.post("/api/settings/test/metron", json=other).json()
         assert second["ok"] is False and "paused" in second["error"]
         assert route.call_count == 1
+
+
+@respx.mock
+def test_comic_import_scans_matches_and_files_issues(tmp_path: Path):
+    import_dir = tmp_path / "incoming"
+    (import_dir / "Example Comic (2019)").mkdir(parents=True)
+    source = import_dir / "Example Comic (2019)" / "Example Comic 001 (2019).cbz"
+    source.write_bytes(b"PK-issue-one")
+    (import_dir / "Stranger 004 (2001).cbz").write_bytes(b"PK-other")
+    respx.get(f"{CV}/volume/4050-4050/").mock(
+        return_value=Response(
+            200,
+            json={
+                "status_code": 1,
+                "results": {"id": 4050, "name": "Example Comic", "start_year": "2019"},
+            },
+        )
+    )
+    respx.get(f"{CV}/issues/").mock(
+        return_value=cv_page(
+            [{"id": 1, "issue_number": "1", "cover_date": "2019-01-01"}]
+        )
+    )
+    with make_client(
+        tmp_path,
+        comicvine_enabled=True,
+        comicvine_api_key="fixture-key",
+        import_dir=import_dir,
+    ) as client:
+        added = client.post(
+            "/api/comics/series",
+            json={"provider": "comicvine", "provider_id": "4050"},
+        ).json()
+        scan = client.get("/api/comics/import/scan").json()
+        by_label = {g["label"]: g for g in scan["groups"]}
+        ready = by_label["Example Comic"]["files"][0]
+        assert ready["status"] == "ready" and ready["issue_id"]
+        assert by_label["Stranger"]["series_id"] is None
+        assert by_label["Stranger"]["files"][0]["status"] == "unmatched"
+
+        item = {
+            "path": ready["path"],
+            "series_id": added["id"],
+            "issue_id": ready["issue_id"],
+        }
+        escape = {**item, "path": "../escape.cbz"}
+        result = client.post(
+            "/api/comics/import", json={"items": [item, escape]}
+        ).json()
+        assert result["imported"] == [ready["path"]]
+        assert len(result["errors"]) == 1
+        assert source.exists()  # copied, not moved
+        issue = client.get(f"/api/comics/series/{added['id']}").json()["issues"][0]
+        assert issue["status"] == "downloaded"
+        assert Path(issue["file_path"]).read_bytes() == b"PK-issue-one"
+        assert str(tmp_path / "library" / "Comics") in issue["file_path"]
+
+        again = client.get("/api/comics/import/scan").json()
+        statuses = {f["status"] for g in again["groups"] for f in g["files"]}
+        assert "already_have" in statuses

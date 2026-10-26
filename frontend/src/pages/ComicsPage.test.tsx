@@ -44,9 +44,9 @@ it("shows the empty state when no series is tracked", async () => {
 
 it("searches only on submit and adds the chosen series", async () => {
   vi.spyOn(api, "comicProviders").mockResolvedValue([provider]);
-  const search = vi.spyOn(api, "comicSearch").mockResolvedValue([
+  const search = vi.spyOn(api, "comicSearch").mockResolvedValue({ errors: [], results: [
     { provider: "comicvine", provider_id: "4050", title: "Example Comic", publisher: "Example Press", year: 2019, description: null, cover_url: null, issue_count: 2, status: null, in_library: false },
-  ]);
+  ] });
   const add = vi.spyOn(api, "comicAdd").mockResolvedValue(detail);
   app(<ComicsPage tab="search" />);
   const input = await screen.findByLabelText("Search comic catalogues");
@@ -54,7 +54,7 @@ it("searches only on submit and adds the chosen series", async () => {
   fireEvent.change(input, { target: { value: "example" } });
   expect(search).not.toHaveBeenCalled();
   fireEvent.submit(input.closest("form")!);
-  await waitFor(() => expect(search).toHaveBeenCalledWith("example", "comicvine"));
+  await waitFor(() => expect(search).toHaveBeenCalledWith("example", "all"));
   fireEvent.click(await screen.findByRole("button", { name: /Add/ }));
   await waitFor(() => expect(add).toHaveBeenCalledWith("comicvine", "4050"));
 });
@@ -63,6 +63,8 @@ it("disables search and explains why while a catalogue is paused", async () => {
   vi.spyOn(api, "comicProviders").mockResolvedValue([{ ...provider, paused: "Metron rejected the credentials (HTTP 401)" }]);
   const search = vi.spyOn(api, "comicSearch");
   app(<ComicsPage tab="search" />);
+  expect(await screen.findByText(/No catalogue is ready/)).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Comic catalogue"), { target: { value: "comicvine" } });
   expect(await screen.findByText(/is paused: Metron rejected the credentials/)).toBeTruthy();
   const button = screen.getByRole("button", { name: /Search/ }) as HTMLButtonElement;
   fireEvent.change(screen.getByLabelText("Search comic catalogues"), { target: { value: "example" } });

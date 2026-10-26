@@ -39,6 +39,8 @@ MANAGED_SECRET_ENV: dict[str, str] = {
     "auth_password": "TANKARR_AUTH_PASSWORD",
     "suwayomi_password": "TANKARR_SUWAYOMI_PASSWORD",
     "prowlarr_api_key": "TANKARR_PROWLARR_API_KEY",
+    "comicvine_api_key": "TANKARR_COMICVINE_API_KEY",
+    "metron_password": "TANKARR_METRON_PASSWORD",
     "qbittorrent_password": "TANKARR_QBITTORRENT_PASSWORD",
     "sabnzbd_api_key": "TANKARR_SABNZBD_API_KEY",
     "komga_api_key": "TANKARR_KOMGA_API_KEY",
@@ -120,6 +122,11 @@ EDITABLE_SETTINGS: dict[str, SettingSpec] = {
     "prowlarr_api_key": SettingSpec("optional_str", secret=True, max_length=300),
     "prowlarr_indexer_ids": SettingSpec("str", max_length=2_000),
     "internet_archive_enabled": SettingSpec("bool"),
+    "comicvine_enabled": SettingSpec("bool"),
+    "comicvine_api_key": SettingSpec("optional_str", secret=True, max_length=300),
+    "metron_enabled": SettingSpec("bool"),
+    "metron_username": SettingSpec("optional_str", max_length=200),
+    "metron_password": SettingSpec("optional_str", secret=True, max_length=300),
     "prowlarr_categories": SettingSpec("str", min_length=1, max_length=2_000),
     "torrent_auto_import": SettingSpec("bool"),
     "qbittorrent_url": SettingSpec("optional_str", max_length=300),
@@ -490,6 +497,18 @@ def _update_settings_locked(
     )
     if proposed_prowlarr_enabled and not proposed_prowlarr_api_key:
         raise ValueError("Prowlarr API key is required while Prowlarr is enabled")
+    # Each comic catalogue stands alone: one may stay empty and disabled.
+    if coerced.get("comicvine_enabled", settings.comicvine_enabled) and not (
+        coerced.get("comicvine_api_key", settings.comicvine_api_key)
+    ):
+        raise ValueError("ComicVine API key is required while ComicVine is enabled")
+    if coerced.get("metron_enabled", settings.metron_enabled) and not (
+        coerced.get("metron_username", settings.metron_username)
+        and coerced.get("metron_password", settings.metron_password)
+    ):
+        raise ValueError(
+            "Metron username and password are required while Metron is enabled"
+        )
     proposed_komga_enabled = coerced.get(
         "komga_link_enabled", settings.komga_link_enabled
     )

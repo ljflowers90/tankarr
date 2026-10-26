@@ -42,6 +42,10 @@ series complete.
 >   it to track its issues. Both are off by default and need your own
 >   credentials (`TANKARR_COMICVINE_*`, `TANKARR_METRON_*`; see the
 >   [configuration reference](docs/configuration.md)).
+> - **Settings page.** ComicVine and Metron credentials are entered in
+>   **Settings > Metadata**, each with its own **Test connection** button. Use
+>   either or both: a catalogue without credentials is skipped, and the search
+>   offers **All available** to query every ready catalogue at once.
 > - **Storage.** New `comic_series` and `comic_issue` tables, separate from the
 >   manga tables. New issues start as *wanted*. Comics are written under
 >   `TANKARR_COMICS_LIBRARY_DIR` (default: a `Comics` folder in the library).

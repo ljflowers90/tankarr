@@ -5403,6 +5403,62 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         finally:
             await probe_client.aclose()
 
+    async def probe_comic_catalogue(name: str, candidate, credentials: tuple[str, ...]):
+        live = app.state.comic_providers[name]
+        if all(getattr(candidate, c) == getattr(settings, c) for c in credentials):
+            # The saved credentials: probe through the live client so a pause
+            # or a rejection it already knows about is respected, not repeated.
+            return await live.probe()
+        paused = live.lockout_reason
+        if name == "metron" and paused:
+            return {
+                "ok": False,
+                "enabled": live.enabled,
+                "error": f"Metron requests are paused: {paused}",
+                "latency_ms": 0,
+            }
+        temporary = type(live)(candidate)
+        try:
+            result = await temporary.probe()
+        finally:
+            await temporary.aclose()
+        if name == "metron":
+            # A ban is per address, so a pause hit here applies to every client.
+            live.adopt_lockout(temporary)
+        return result
+
+    @app.post("/api/settings/test/comicvine")
+    async def test_comicvine(changes: dict[str, object] | None = None):
+        try:
+            candidate = preview_settings(
+                settings,
+                changes or {},
+                allowed={"comicvine_enabled", "comicvine_api_key"},
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if not candidate.comicvine_api_key:
+            return {"ok": False, "error": "Enter a ComicVine API key first"}
+        return await probe_comic_catalogue(
+            "comicvine", candidate, ("comicvine_api_key",)
+        )
+
+    @app.post("/api/settings/test/metron")
+    async def test_metron(changes: dict[str, object] | None = None):
+        try:
+            candidate = preview_settings(
+                settings,
+                changes or {},
+                allowed={"metron_enabled", "metron_username", "metron_password"},
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if not (candidate.metron_username and candidate.metron_password):
+            return {"ok": False, "error": "Enter a Metron username and password first"}
+        return await probe_comic_catalogue(
+            "metron", candidate, ("metron_username", "metron_password")
+        )
+
     @app.post("/api/settings/test/komga")
     async def test_komga_shortcut(changes: dict[str, object] | None = None):
         try:

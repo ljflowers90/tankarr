@@ -1,6 +1,8 @@
 import { serverUrl } from "./serverUrl";
 import type {
   ComicProviderStatus,
+  ComicCatalogueProbe,
+  ComicSearchResponse,
   ComicSearchResult,
   ComicSeries,
   ComicSeriesSummary,
@@ -307,7 +309,7 @@ export const libraryStore = {
 export const api = {
   comicProviders: () => request<ComicProviderStatus[]>("/api/comics/providers"),
   comicSearch: (query: string, provider: string) =>
-    request<ComicSearchResult[]>(
+    request<ComicSearchResponse>(
       `/api/comics/search?q=${encodeURIComponent(query)}&provider=${encodeURIComponent(provider)}`,
     ),
   comicAdd: (provider: string, providerId: string) =>
@@ -844,6 +846,16 @@ export const api = {
     }),
   testInternetArchive: (changes: Record<string, string>) =>
     request<InternetArchiveProbe>("/api/settings/test/internet-archive", {
+      method: "POST",
+      body: JSON.stringify(changes),
+    }),
+  testComicVine: (changes: Record<string, string>) =>
+    request<ComicCatalogueProbe>("/api/settings/test/comicvine", {
+      method: "POST",
+      body: JSON.stringify(changes),
+    }),
+  testMetron: (changes: Record<string, string>) =>
+    request<ComicCatalogueProbe>("/api/settings/test/metron", {
       method: "POST",
       body: JSON.stringify(changes),
     }),

@@ -211,6 +211,10 @@ Prowlarr gives Tankarr access to your torrent and Usenet indexers. Torrent
 releases are sent to qBittorrent, NZB releases to SABnzbd. archive.org is
 searched and downloaded directly.
 
+Both comic catalogues can also be set in **Settings > Metadata**, each with a
+Test button. They are independent: use either one or both, and a catalogue
+with no credentials is skipped.
+
 | Variable | Default | Description |
 | --- | --- | --- |
 | `TANKARR_COMICVINE_ENABLED` | `false` | Search [ComicVine](https://comicvine.gamespot.com) for comic series and issues. Needs your own API key and is subject to ComicVine's terms and rate limits. |

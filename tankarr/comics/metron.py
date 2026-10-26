@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import time
 
 import httpx
@@ -10,6 +11,7 @@ import httpx
 from tankarr.comics.base import (
     ComicIssue,
     ComicSeries,
+    RequestGuard,
     clean_text,
     to_int,
     to_year,
@@ -45,28 +47,23 @@ def _name(value: object) -> str | None:
     return clean_text(value)
 
 
-class MetronClient:
+class MetronClient(RequestGuard):
     name = NAME
     label = LABEL
 
     def __init__(self, settings: Settings):
         self.settings = settings
-        auth = None
-        if settings.metron_username and settings.metron_password:
-            auth = httpx.BasicAuth(settings.metron_username, settings.metron_password)
-        # Metron asks clients to stay under 30 requests a minute.
+        # Credentials are read per request: saving new ones in Settings takes
+        # effect without a restart.
         self.http = ProviderHTTP(
             headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
-            auth=auth,
             timeout_seconds=max(30.0, float(settings.request_timeout_seconds)),
             requests_per_second=1.0 / SECONDS_BETWEEN_REQUESTS,
             # Never resend: a retried request still counts against the limit.
             max_attempts=1,
         )
         self._gate = asyncio.Lock()
-        self._halted: str | None = None
-        self._blocked_until = 0.0
-        self._blocked_reason = ""
+        RequestGuard.__init__(self, self._credentials)
 
     @property
     def enabled(self) -> bool:
@@ -76,20 +73,15 @@ class MetronClient:
     def configured(self) -> bool:
         return bool(self.settings.metron_username and self.settings.metron_password)
 
-    @property
-    def blocked_reason(self) -> str | None:
-        """Why no request is being sent, or None when Metron can be called."""
+    def _credentials(self) -> tuple[str, ...]:
+        return (
+            self.settings.metron_username or "",
+            self.settings.metron_password or "",
+        )
 
-        if self._halted:
-            return self._halted
-        remaining = self._blocked_until - time.time()
-        if remaining > 0:
-            return f"{self._blocked_reason}; retry in {int(remaining // 60) + 1} min"
-        return None
-
-    def _block(self, seconds: float, reason: str) -> None:
-        self._blocked_until = max(self._blocked_until, time.time() + seconds)
-        self._blocked_reason = reason
+    def _auth_header(self) -> dict[str, str]:
+        token = base64.b64encode(":".join(self._credentials()).encode()).decode()
+        return {"Authorization": f"Basic {token}"}
 
     def _record_limits(self, response: httpx.Response) -> None:
         now = time.time()
@@ -98,7 +90,7 @@ class MetronClient:
             reset = _header_int(response, f"X-RateLimit-{window}-Reset")
             if remaining is not None and remaining <= 0:
                 wait = max(1.0, (reset - now) if reset else DEFAULT_LOCKOUT_SECONDS)
-                self._block(wait, f"Metron {window.lower()} request limit used up")
+                self.block(wait, f"Metron {window.lower()} request limit used up")
 
     async def _get(self, path: str, params: dict | None = None) -> dict:
         if not self.configured:
@@ -111,14 +103,17 @@ class MetronClient:
                 raise MetronError(f"Metron requests are paused: {reason}")
             try:
                 response = await self.http.request(
-                    "GET", f"{base}/{path}/", params=params
+                    "GET",
+                    f"{base}/{path}/",
+                    params=params,
+                    headers=self._auth_header(),
                 )
             except httpx.HTTPStatusError as exc:
                 status = exc.response.status_code
                 if status in (401, 403):
-                    self._halted = (
+                    self.halt(
                         f"Metron rejected the credentials (HTTP {status}); "
-                        "fix them in Settings and restart Tankarr"
+                        "update them in Settings"
                     )
                     raise MetronError(self._halted, status_code=status) from None
                 raise MetronError(
@@ -126,7 +121,7 @@ class MetronClient:
                 ) from None
             except ProviderRequestError as exc:
                 if exc.status_code == 429:
-                    self._block(DEFAULT_LOCKOUT_SECONDS, "Metron rate limit reached")
+                    self.block(DEFAULT_LOCKOUT_SECONDS, "Metron rate limit reached")
                     raise MetronError(
                         "Metron rate limit reached; requests are paused for an hour",
                         status_code=429,
@@ -187,6 +182,26 @@ class MetronClient:
             if not payload.get("next"):
                 break
         return found
+
+    async def probe(self) -> dict:
+        """One real request, timed. A rejected credential halts the client."""
+
+        started = time.monotonic()
+        try:
+            payload = await self._get("series", {"name": "batman"})
+        except ProviderRequestError as exc:
+            return {
+                "ok": False,
+                "enabled": self.enabled,
+                "error": redact_secrets(str(exc))[:300],
+                "latency_ms": round((time.monotonic() - started) * 1000),
+            }
+        return {
+            "ok": True,
+            "enabled": self.enabled,
+            "latency_ms": round((time.monotonic() - started) * 1000),
+            "results": len(payload.get("results") or []),
+        }
 
     async def aclose(self) -> None:
         await self.http.aclose()

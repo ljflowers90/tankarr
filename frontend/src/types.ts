@@ -1764,3 +1764,14 @@ export type ComicSeries = Omit<ComicSeriesSummary, "issues" | "downloaded" | "wa
 };
 
 export type ComicWantedIssue = ComicIssue & { series_title: string };
+
+export type ComicSearchResponse = {
+  results: ComicSearchResult[];
+  errors: { provider: string; error: string }[];
+};
+
+export type ComicCatalogueProbe = {
+  ok: boolean;
+  error?: string;
+  latency_ms?: number;
+};

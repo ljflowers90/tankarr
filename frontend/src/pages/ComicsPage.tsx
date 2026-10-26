@@ -3,6 +3,7 @@ import { api } from "../api";
 import { Cover, EmptyState, Icon, Spinner, StatusPill, useApp } from "../components";
 import type {
   ComicProviderStatus,
+  ComicSearchResponse,
   ComicSearchResult,
   ComicSeriesSummary,
   ComicWantedIssue,
@@ -99,7 +100,7 @@ function providerNote(provider: ComicProviderStatus | undefined): string | null 
 function ComicSearch() {
   const { notify } = useApp();
   const [providers, setProviders] = useState<ComicProviderStatus[]>([]);
-  const [provider, setProvider] = useState("comicvine");
+  const [provider, setProvider] = useState("all");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ComicSearchResult[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -110,15 +111,24 @@ function ComicSearch() {
   }, []);
   useEffect(loadProviders, [loadProviders]);
 
+  const usable = providers.filter((item) => item.enabled && item.configured && !item.paused);
   const current = providers.find((item) => item.name === provider);
-  const note = providerNote(current);
+  const note =
+    provider === "all"
+      ? providers.length && !usable.length
+        ? t("No catalogue is ready. Add ComicVine or Metron credentials in Settings.")
+        : null
+      : providerNote(current);
+  const [partial, setPartial] = useState<ComicSearchResponse["errors"]>([]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (query.trim().length < 2 || busy) return;
     setBusy(true);
     try {
-      setResults(await api.comicSearch(query.trim(), provider));
+      const found = await api.comicSearch(query.trim(), provider);
+      setResults(found.results);
+      setPartial(found.errors);
     } catch (caught) {
       notify("error", String(caught));
     } finally {
@@ -161,7 +171,8 @@ function ComicSearch() {
             value={provider}
             onChange={(event) => setProvider(event.target.value)}
           >
-            {(providers.length ? providers : [{ name: "comicvine", label: "ComicVine" }]).map((item) => (
+            <option value="all">{t("All available")}</option>
+            {providers.map((item) => (
               <option key={item.name} value={item.name}>
                 {item.label}
               </option>
@@ -177,6 +188,11 @@ function ComicSearch() {
           <Icon name="alert" /> {note}
         </div>
       ) : null}
+      {partial.map((item) => (
+        <div className="banner banner-warn" key={item.provider}>
+          <Icon name="alert" /> {t("{provider} could not be searched: {error}", { provider: item.provider, error: item.error })}
+        </div>
+      ))}
       {busy ? (
         <Spinner />
       ) : results === null ? (

@@ -105,6 +105,7 @@ type SectionDef = {
     keys: string[];
   };
   prowlarrTest?: { keys: string[] };
+  comicTest?: { provider: "comicvine" | "metron"; keys: string[] };
   internetArchiveTest?: { keys: string[] };
 };
 
@@ -616,6 +617,52 @@ const SECTIONS: SectionDef[] = [
     },
   },
   {
+    title: msg("ComicVine"),
+    group: "metadata",
+    description: msg("Western comics catalogue. Use ComicVine, Metron or both: a catalogue without credentials is simply skipped and the other keeps working."),
+    fields: [
+      {
+        key: "comicvine_enabled",
+        label: msg("Enable ComicVine"),
+        hint: msg("Off by default. Tankarr paces requests and stops for an hour when ComicVine reports its rate limit."),
+        kind: "boolean",
+      },
+      {
+        key: "comicvine_api_key",
+        label: msg("API key"),
+        hint: msg("Get a free key at comicvine.gamespot.com/api. It is stored in /config/metadata.env with mode 0600 and is never returned unmasked."),
+        kind: "password",
+      },
+    ],
+    comicTest: { provider: "comicvine", keys: ["comicvine_enabled", "comicvine_api_key"] },
+  },
+  {
+    title: msg("Metron"),
+    group: "metadata",
+    description: msg("Western comics catalogue (metron.cloud). Requests are limited to 15 per minute and Tankarr stops completely if Metron rejects the credentials, so a typo cannot get your address banned."),
+    fields: [
+      {
+        key: "metron_enabled",
+        label: msg("Enable Metron"),
+        hint: msg("Off by default."),
+        kind: "boolean",
+      },
+      {
+        key: "metron_username",
+        label: msg("Username"),
+        hint: msg("Your Metron account name."),
+        kind: "text",
+      },
+      {
+        key: "metron_password",
+        label: msg("Password"),
+        hint: msg("Stored in /config/metadata.env with mode 0600 and never returned unmasked."),
+        kind: "password",
+      },
+    ],
+    comicTest: { provider: "metron", keys: ["metron_enabled", "metron_username", "metron_password"] },
+  },
+  {
     title: msg("Metadata catalogues"),
     group: "metadata",
     description: msg("MangaBaka is the only manga catalogue Tankarr queries: it identifies the work and already aggregates MangaUpdates, AniList, MAL and Kitsu. The calendar comes from the mapped official platform's own release dates."),
@@ -986,6 +1033,7 @@ export default function SettingsPage() {
   const [providerTests, setProviderTests] = useState<Record<string, string>>({});
   const [suwayomiSources, setSuwayomiSources] = useState<SuwayomiSource[]>([]);
   const [prowlarrTest, setProwlarrTest] = useState<string | null>(null);
+  const [comicTests, setComicTests] = useState<Record<string, string>>({});
   const [internetArchiveTest, setInternetArchiveTest] = useState<string | null>(null);
   const [readerTest, setReaderTest] = useState<string | null>(null);
   const [readerDiscovery, setReaderDiscovery] = useState<string | null>(null);
@@ -1240,6 +1288,22 @@ export default function SettingsPage() {
       );
     } catch (caught) {
       setInternetArchiveTest(String(caught));
+    }
+  };
+
+  const testComic = async (provider: "comicvine" | "metron", keys: string[]) => {
+    const show = (text: string) => setComicTests((current) => ({ ...current, [provider]: text }));
+    show("…");
+    try {
+      const values = pickValues(keys);
+      const result = await (provider === "comicvine" ? api.testComicVine(values) : api.testMetron(values));
+      show(
+        result.ok
+          ? t("OK — connected in {ms} ms", { ms: result.latency_ms ?? 0 })
+          : t("Failed: {error}", { error: result.error ?? t("unknown error") }),
+      );
+    } catch (caught) {
+      show(String(caught));
     }
   };
 
@@ -1717,6 +1781,21 @@ export default function SettingsPage() {
                 </button>
                 {internetArchiveTest ? (
                   <p className="muted small setting-test-result">{internetArchiveTest}</p>
+                ) : null}
+              </div>
+            ) : null}
+            {section.comicTest ? (
+              <div className="form-row setting-test-row">
+                <button
+                  type="button"
+                  className="btn btn-small"
+                  disabled={comicTests[section.comicTest.provider] === "…"}
+                  onClick={() => void testComic(section.comicTest!.provider, section.comicTest!.keys)}
+                >
+                  <Icon name="check" size={14} /> {t("Test connection")}
+                </button>
+                {comicTests[section.comicTest.provider] ? (
+                  <p className="muted small setting-test-result">{comicTests[section.comicTest.provider]}</p>
                 ) : null}
               </div>
             ) : null}

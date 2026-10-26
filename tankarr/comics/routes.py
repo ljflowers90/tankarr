@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 
@@ -50,22 +52,53 @@ def register_comic_routes(
             for p in providers.values()
         ]
 
+    def usable(provider: ComicProvider) -> bool:
+        return (
+            provider.enabled
+            and provider.configured
+            and not getattr(provider, "blocked_reason", None)
+        )
+
     @app.get("/api/comics/search")
     async def comic_search(
-        q: str = Query(min_length=2, max_length=200), provider: str = "comicvine"
+        q: str = Query(min_length=2, max_length=200), provider: str = "all"
     ):
-        try:
-            found = await provider_for(provider).search(q.strip())
-        except ProviderRequestError as exc:
-            raise upstream(exc) from exc
+        """Search one catalogue, or every catalogue that is ready to be used."""
+
+        if provider == "all":
+            chosen = [p for p in providers.values() if usable(p)]
+            if not chosen:
+                raise HTTPException(
+                    409,
+                    "No comic catalogue is ready: enable ComicVine or Metron and "
+                    "add its credentials in Settings",
+                )
+        else:
+            chosen = [provider_for(provider)]
+        outcomes = await asyncio.gather(
+            *(p.search(q.strip()) for p in chosen), return_exceptions=True
+        )
         tracked = {(row["provider"], row["provider_id"]) for row in store.list_series()}
-        return [
-            {
-                **item.as_dict(),
-                "in_library": (item.provider, item.provider_id) in tracked,
-            }
-            for item in found
-        ]
+        results: list[dict] = []
+        errors: list[dict] = []
+        for catalogue, outcome in zip(chosen, outcomes, strict=True):
+            if isinstance(outcome, ProviderRequestError):
+                errors.append(
+                    {"provider": catalogue.label, "error": redact_secrets(str(outcome))}
+                )
+            elif isinstance(outcome, BaseException):
+                raise outcome
+            else:
+                results.extend(
+                    {
+                        **item.as_dict(),
+                        "in_library": (item.provider, item.provider_id) in tracked,
+                    }
+                    for item in outcome
+                )
+        if errors and len(errors) == len(chosen):
+            raise HTTPException(502, "; ".join(e["error"] for e in errors))
+        return {"results": results, "errors": errors}
 
     @app.post("/api/comics/series")
     async def comic_add(body: AddComicSeries):

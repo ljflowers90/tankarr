@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from typing import Any, Protocol
 
@@ -69,3 +71,50 @@ def to_year(value: object) -> int | None:
 def clean_text(value: object) -> str | None:
     text = " ".join(str(value or "").split())
     return text or None
+
+
+class RequestGuard:
+    """Stops a catalogue client from hammering a service that said no.
+
+    A rejected credential halts the client until the credentials change; a
+    rate limit pauses it for a while. Neither state is left by retrying.
+    """
+
+    def __init__(self, credentials: Callable[[], tuple[str, ...]]):
+        self._credentials = credentials
+        self._halted: str | None = None
+        self._halted_credentials: tuple[str, ...] | None = None
+        self._blocked_until = 0.0
+        self._blocked_reason = ""
+
+    def halt(self, reason: str) -> None:
+        self._halted = reason
+        self._halted_credentials = self._credentials()
+
+    def block(self, seconds: float, reason: str) -> None:
+        self._blocked_until = max(self._blocked_until, time.time() + seconds)
+        self._blocked_reason = reason
+
+    def adopt_lockout(self, other: RequestGuard) -> None:
+        """Carry over a pause another client of the same service just hit."""
+
+        if other.lockout_reason:
+            self._blocked_until = max(self._blocked_until, other._blocked_until)
+            self._blocked_reason = other._blocked_reason
+
+    @property
+    def lockout_reason(self) -> str | None:
+        """A time-based pause (rate limit), whatever the credentials are."""
+
+        remaining = self._blocked_until - time.time()
+        if remaining > 0:
+            return f"{self._blocked_reason}; retry in {int(remaining // 60) + 1} min"
+        return None
+
+    @property
+    def blocked_reason(self) -> str | None:
+        """Why no request is being sent, or None when the service can be called."""
+
+        if self._halted and self._halted_credentials != self._credentials():
+            self._halted = None
+        return self._halted or self.lockout_reason

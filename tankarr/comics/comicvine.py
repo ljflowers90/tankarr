@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
+import time
 
 import httpx
 
 from tankarr.comics.base import (
     ComicIssue,
     ComicSeries,
+    RequestGuard,
     clean_text,
     to_int,
     to_year,
@@ -20,6 +23,7 @@ from tankarr.redaction import redact_secrets
 NAME = "comicvine"
 LABEL = "ComicVine"
 USER_AGENT = "Tankarr (+https://github.com/Renzodef/tankarr)"
+RATE_LIMIT_PAUSE_SECONDS = 3600.0
 _TAGS = re.compile(r"<[^>]+>")
 
 
@@ -31,7 +35,7 @@ def _description(record: dict) -> str | None:
     return clean_text(_TAGS.sub(" ", str(record.get("deck") or "")))
 
 
-class ComicVineClient:
+class ComicVineClient(RequestGuard):
     name = NAME
     label = LABEL
 
@@ -42,7 +46,13 @@ class ComicVineClient:
             headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
             timeout_seconds=max(30.0, float(settings.request_timeout_seconds)),
             requests_per_second=0.5,
+            max_attempts=1,
         )
+        self._gate = asyncio.Lock()
+        RequestGuard.__init__(self, self._credentials)
+
+    def _credentials(self) -> tuple[str, ...]:
+        return (self.settings.comicvine_api_key or "",)
 
     @property
     def enabled(self) -> bool:
@@ -61,21 +71,41 @@ class ComicVineClient:
             "api_key": self.settings.comicvine_api_key,
             "format": "json",
         }
-        try:
-            payload = await self.http.get_json(f"{base}/{path}/", params=query)
-        except httpx.HTTPStatusError as exc:
-            # The key travels in the query string: report the status only.
-            raise ComicVineError(
-                f"ComicVine returned HTTP {exc.response.status_code}",
-                status_code=exc.response.status_code,
-            ) from None
-        except ProviderRequestError as exc:
-            raise ComicVineError(
-                redact_secrets(str(exc)), status_code=exc.status_code
-            ) from None
-        if not isinstance(payload, dict) or payload.get("status_code") != 1:
-            error = payload.get("error") if isinstance(payload, dict) else None
-            raise ComicVineError(f"ComicVine error: {error or 'unusable response'}")
+        async with self._gate:
+            reason = self.blocked_reason
+            if reason:
+                raise ComicVineError(f"ComicVine requests are paused: {reason}")
+            try:
+                payload = await self.http.get_json(f"{base}/{path}/", params=query)
+            except httpx.HTTPStatusError as exc:
+                # The key travels in the query string: report the status only.
+                status = exc.response.status_code
+                if status in (401, 403):
+                    self.halt(
+                        f"ComicVine rejected the API key (HTTP {status}); "
+                        "update it in Settings"
+                    )
+                    raise ComicVineError(self._halted, status_code=status) from None
+                if status == 420:
+                    self.block(RATE_LIMIT_PAUSE_SECONDS, "ComicVine rate limit reached")
+                raise ComicVineError(
+                    f"ComicVine returned HTTP {status}", status_code=status
+                ) from None
+            except ProviderRequestError as exc:
+                if exc.status_code == 429:
+                    self.block(RATE_LIMIT_PAUSE_SECONDS, "ComicVine rate limit reached")
+                raise ComicVineError(
+                    redact_secrets(str(exc)), status_code=exc.status_code
+                ) from None
+            code = payload.get("status_code") if isinstance(payload, dict) else None
+            if code == 100:
+                self.halt("ComicVine rejected the API key; update it in Settings")
+                raise ComicVineError(self._halted, status_code=401)
+            if code == 107:
+                self.block(RATE_LIMIT_PAUSE_SECONDS, "ComicVine rate limit reached")
+            if code != 1:
+                error = payload.get("error") if isinstance(payload, dict) else None
+                raise ComicVineError(f"ComicVine error: {error or 'unusable response'}")
         return payload
 
     @staticmethod
@@ -132,6 +162,25 @@ class ComicVineClient:
                 payload.get("number_of_total_results") or 0
             ):
                 return found
+
+    async def probe(self) -> dict:
+        """One real request, timed."""
+
+        started = time.monotonic()
+        try:
+            await self._get("volumes", {"limit": 1, "field_list": "id"})
+        except ProviderRequestError as exc:
+            return {
+                "ok": False,
+                "enabled": self.enabled,
+                "error": redact_secrets(str(exc))[:300],
+                "latency_ms": round((time.monotonic() - started) * 1000),
+            }
+        return {
+            "ok": True,
+            "enabled": self.enabled,
+            "latency_ms": round((time.monotonic() - started) * 1000),
+        }
 
     async def aclose(self) -> None:
         await self.http.aclose()

@@ -26,6 +26,44 @@ its own built-in reader. If you know Sonarr or Radarr, you already know how it
 works: add a series once, pick a monitoring profile, and Tankarr keeps the
 series complete.
 
+> ## About this fork
+>
+> This fork ([ljflowers90/tankarr](https://github.com/ljflowers90/tankarr))
+> adds Western-comic support in the style of
+> [Mylar3](https://github.com/MylarComics/mylar3), alongside the existing
+> manga features. It is a work in progress, developed in milestones on
+> feature branches; the upstream project is
+> [Renzodef/tankarr](https://github.com/Renzodef/tankarr).
+>
+> **Done: milestone 1, comic catalogues** (branch `feat/comics-catalogue`)
+>
+> - **[ComicVine](https://comicvine.gamespot.com) and
+>   [Metron](https://metron.cloud) catalogues.** Search a comic series and add
+>   it to track its issues. Both are off by default and need your own
+>   credentials (`TANKARR_COMICVINE_*`, `TANKARR_METRON_*`; see the
+>   [configuration reference](docs/configuration.md)).
+> - **Storage.** New `comic_series` and `comic_issue` tables, separate from the
+>   manga tables. New issues start as *wanted*. Comics are written under
+>   `TANKARR_COMICS_LIBRARY_DIR` (default: a `Comics` folder in the library).
+> - **API only, for now.** `GET /api/comics/providers`, `GET /api/comics/search`,
+>   `POST /api/comics/series`, `GET /api/comics/series[/{id}]`,
+>   `PUT /api/comics/series/{id}/monitored`, `DELETE /api/comics/series/{id}`
+>   and `GET /api/comics/wanted`. There is no comics page in the web interface
+>   yet.
+> - **Safe with rate-limited catalogues.** ComicVine requests are paced and its
+>   key never appears in errors. Metron requests are sent one at a time, five
+>   seconds apart (its limit is 15 a minute), are never retried, and stop
+>   completely after a 401/403 (until you fix the credentials and restart) or a
+>   429 (for an hour). Metron's `X-RateLimit-*` headers are honoured.
+>
+> **Not built yet:** issue release parsing and the Wanted search, indexer
+> search and sending to download clients (qBittorrent, SABnzbd, NZBGet),
+> post-processing and `ComicInfo.xml` for issues, importing an existing
+> CBZ/CBR library, story arcs and the pull list, and the web interface.
+>
+> Everything else in this README describes upstream Tankarr and applies
+> unchanged.
+
 **[Try it online](https://renzodef.github.io/tankarr/demo/)**: the real
 interface on a library of well-known manga, manhwa and manhua, every page and
 the built-in reader, nothing to install.

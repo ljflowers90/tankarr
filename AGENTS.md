@@ -1,8 +1,8 @@
 # Working in this repository as an AI agent (Codex, Claude, others)
 
-Tankarr is a generic, self-hosted manga monitor published as open source. Anyone
-may run it, on any host. These rules keep it that way, keep `main` releasable,
-and keep two agents from stepping on each other.
+Tankarr is a generic, self-hosted manga and comics manager published as open
+source. Anyone may run it, on any host. These rules keep it that way, keep
+`main` releasable, and keep two agents from stepping on each other.
 
 ## Which repository is this?
 
@@ -25,11 +25,25 @@ installations. Installation-specific instructions belong in `AGENTS.local.md`
 - No private pipelines. Machine translation queues, personal download scripts,
   scripts for one person's NAS: they live outside this repository. If Tankarr
   needs a hook for such a thing, it is a generic feature, off by default.
-- Tankarr ships no download sources and no extension repository: the operator
-  configures them. Do not add defaults that point at specific sites. The
-  built-in integrations with public catalogues and libraries (MangaBaka,
-  AniList, archive.org and the like) are documented, generic features with an
-  on/off switch, not exceptions to this rule.
+- Operators configure their own manga download sources and indexers; Tankarr
+  ships no source extensions or site-specific defaults. Integrations with
+  public catalogues and libraries (MangaBaka, AniList, archive.org, ComicVine,
+  Metron and the like) are generic features, documented and off by default
+  where applicable. Credentials are operator-supplied, never defaults.
+- Manga and comics are separate product domains. Manga behavior and storage
+  remain in their existing modules and tables; comic catalogue, issue tracking,
+  release parsing and library import live under `tankarr/comics/` and use
+  comic-specific storage. Preserve that separation instead of reusing manga
+  models, routes or numbering assumptions for comics. Comics currently support
+  ComicVine and Metron catalogues, tracked issues, release-title parsing and
+  importing existing files; do not assume manga's download-acquisition
+  pipeline also applies to comics.
+- ComicVine and Metron are optional operator-configured catalogues. Keep them
+  disabled by default, respect their rate limits and provider-specific error
+  behavior, and never expose credentials in logs, errors or API responses.
+  Comic files belong under `TANKARR_COMICS_LIBRARY_DIR`, defaulting to the
+  `Comics` subdirectory of the main library; keep that setting documented in
+  `docs/configuration.md` and preserve the configuration documentation test.
 - Notes for a specific installation go in `AGENTS.local.md`; hand-offs between
   agents in `HANDOFF-*.md`. Both are git-ignored: never commit them.
 - Before committing, search the staged diff for your own installation's
@@ -62,9 +76,13 @@ installations. Installation-specific instructions belong in `AGENTS.local.md`
 
 - Backend: `ruff check` and `ruff format` clean, and the tests for what you
   touched green: `.venv/bin/python -m pytest tests/test_<module>.py`.
+- Comics backend changes: run the relevant comic tests, usually
+  `.venv/bin/python -m pytest tests/test_comics.py tests/test_comic_release.py`.
 - Frontend: `npm run build --prefix frontend` (runs `tsc -b`) for any change to
   TypeScript; `npx tsc --noEmit -p .` does not see errors across project
   references.
+- Comics UI changes: include the focused comics page tests in
+  `frontend/src/pages/ComicsPage.test.tsx` when changing comic page behavior.
 - New or changed settings: document every `TANKARR_*` variable in
   `docs/configuration.md` (a test enforces it) and update
   `docker-compose.yml`/`.env.sample` when users need it.
